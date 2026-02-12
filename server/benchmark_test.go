@@ -12,6 +12,8 @@ import (
 	"time"
 )
 
+const serviceURL = "http://192.168.3.21:8090"
+
 type BenchmarkMetrics struct {
 	Latencies     []time.Duration
 	TokenCounts   []int
@@ -22,7 +24,6 @@ type BenchmarkMetrics struct {
 }
 
 type BenchmarkResult struct {
-	ServiceURL         string
 	TotalRequests      int
 	SuccessfulRequests int
 	FailedRequests     int
@@ -41,7 +42,6 @@ type BenchmarkResult struct {
 // TestBenchmarkSingleService 测试单个服务的性能
 // 使用方法: go test -run TestBenchmarkSingleService -v -timeout 10m
 func TestBenchmarkSingleService(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 4
 	requestCount := 20
 	maxTokens := int32(128)
@@ -51,14 +51,14 @@ func TestBenchmarkSingleService(t *testing.T) {
 	t.Logf("Starting benchmark for %s", serviceURL)
 	t.Logf("Config: concurrency=%d, requests=%d, max_tokens=%d", concurrency, requestCount, maxTokens)
 
-	result := runBenchmarkTest(t, serviceURL, concurrency, requestCount, maxTokens, temperature, prompt)
+	result := runBenchmarkTest(t, concurrency, requestCount, maxTokens, temperature, prompt)
 	printBenchmarkResult(t, result)
 }
 
 // TestBenchmarkHighLoad 高负载测试
 // 使用方法: go test -run TestBenchmarkHighLoad -v -timeout 20m
 func TestBenchmarkHighLoad(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8090"
+
 	concurrency := 8
 	requestCount := 50
 	maxTokens := int32(256)
@@ -68,14 +68,14 @@ func TestBenchmarkHighLoad(t *testing.T) {
 	t.Logf("Starting high-load benchmark for %s", serviceURL)
 	t.Logf("Config: concurrency=%d, requests=%d, max_tokens=%d", concurrency, requestCount, maxTokens)
 
-	result := runBenchmarkTest(t, serviceURL, concurrency, requestCount, maxTokens, temperature, prompt)
+	result := runBenchmarkTest(t, concurrency, requestCount, maxTokens, temperature, prompt)
 	printBenchmarkResult(t, result)
 }
 
 // TestBenchmarkLongText 长文本生成测试
 // 使用方法: go test -run TestBenchmarkLongText -v -timeout 20m
 func TestBenchmarkLongText(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8090"
+
 	concurrency := 2
 	requestCount := 10
 	maxTokens := int32(512)
@@ -85,14 +85,14 @@ func TestBenchmarkLongText(t *testing.T) {
 	t.Logf("Starting long-text benchmark for %s", serviceURL)
 	t.Logf("Config: concurrency=%d, requests=%d, max_tokens=%d", concurrency, requestCount, maxTokens)
 
-	result := runBenchmarkTest(t, serviceURL, concurrency, requestCount, maxTokens, temperature, prompt)
+	result := runBenchmarkTest(t, concurrency, requestCount, maxTokens, temperature, prompt)
 	printBenchmarkResult(t, result)
 }
 
 // TestBenchmarkLowLatency 低延迟测试（短文本）
 // 使用方法: go test -run TestBenchmarkLowLatency -v -timeout 10m
 func TestBenchmarkLowLatency(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8090"
+
 	concurrency := 10
 	requestCount := 50
 	maxTokens := int32(32)
@@ -102,14 +102,14 @@ func TestBenchmarkLowLatency(t *testing.T) {
 	t.Logf("Starting low-latency benchmark for %s", serviceURL)
 	t.Logf("Config: concurrency=%d, requests=%d, max_tokens=%d", concurrency, requestCount, maxTokens)
 
-	result := runBenchmarkTest(t, serviceURL, concurrency, requestCount, maxTokens, temperature, prompt)
+	result := runBenchmarkTest(t, concurrency, requestCount, maxTokens, temperature, prompt)
 	printBenchmarkResult(t, result)
 }
 
 // TestBenchmarkStress 压力测试
 // 使用方法: go test -run TestBenchmarkStress -v -timeout 30m
 func TestBenchmarkStress(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8090"
+
 	concurrency := 16
 	requestCount := 100
 	maxTokens := int32(128)
@@ -119,11 +119,11 @@ func TestBenchmarkStress(t *testing.T) {
 	t.Logf("Starting stress benchmark for %s", serviceURL)
 	t.Logf("Config: concurrency=%d, requests=%d, max_tokens=%d", concurrency, requestCount, maxTokens)
 
-	result := runBenchmarkTest(t, serviceURL, concurrency, requestCount, maxTokens, temperature, prompt)
+	result := runBenchmarkTest(t, concurrency, requestCount, maxTokens, temperature, prompt)
 	printBenchmarkResult(t, result)
 }
 
-func runBenchmarkTest(t *testing.T, serviceURL string, concurrency, requestCount int, maxTokens int32, temperature float32, prompt string) *BenchmarkResult {
+func runBenchmarkTest(t *testing.T, concurrency, requestCount int, maxTokens int32, temperature float32, prompt string) *BenchmarkResult {
 	metrics := &BenchmarkMetrics{
 		Latencies:   make([]time.Duration, 0, requestCount),
 		TokenCounts: make([]int, 0, requestCount),
@@ -143,7 +143,7 @@ func runBenchmarkTest(t *testing.T, serviceURL string, concurrency, requestCount
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			latency, tokenCount, err := makeTestRequest(serviceURL, maxTokens, temperature, prompt)
+			latency, tokenCount, err := makeTestRequest(maxTokens, temperature, prompt)
 
 			mu.Lock()
 			if err != nil {
@@ -164,7 +164,7 @@ func runBenchmarkTest(t *testing.T, serviceURL string, concurrency, requestCount
 	return calculateBenchmarkResult(serviceURL, requestCount, metrics)
 }
 
-func makeTestRequest(serviceURL string, maxTokens int32, temperature float32, prompt string) (time.Duration, int, error) {
+func makeTestRequest(maxTokens int32, temperature float32, prompt string) (time.Duration, int, error) {
 	client := &http.Client{
 		Timeout: 60 * time.Second,
 	}
@@ -180,8 +180,15 @@ func makeTestRequest(serviceURL string, maxTokens int32, temperature float32, pr
 		},
 	}
 
-	body, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", serviceURL+"/v1/chat/completions", bytes.NewReader(body))
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return 0, 0, fmt.Errorf("marshal request failed: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", serviceURL+"/v1/chat/completions", bytes.NewReader(body))
+	if err != nil {
+		return 0, 0, fmt.Errorf("create request failed: %w", err)
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	start := time.Now()
@@ -216,7 +223,6 @@ func makeTestRequest(serviceURL string, maxTokens int32, temperature float32, pr
 
 func calculateBenchmarkResult(serviceURL string, totalRequests int, metrics *BenchmarkMetrics) *BenchmarkResult {
 	result := &BenchmarkResult{
-		ServiceURL:         serviceURL,
 		TotalRequests:      totalRequests,
 		SuccessfulRequests: metrics.SuccessCount,
 		FailedRequests:     metrics.FailureCount,
@@ -260,7 +266,7 @@ func calculateBenchmarkResult(serviceURL string, totalRequests int, metrics *Ben
 
 func printBenchmarkResult(t *testing.T, r *BenchmarkResult) {
 	t.Logf("\n========== Benchmark Results ==========")
-	t.Logf("Service URL:         %s", r.ServiceURL)
+	t.Logf("Service URL:         %s", serviceURL)
 	t.Logf("Total Requests:      %d", r.TotalRequests)
 	t.Logf("Successful:          %d", r.SuccessfulRequests)
 	t.Logf("Failed:              %d", r.FailedRequests)
