@@ -1,4 +1,4 @@
-@dev_server=http://127.0.0.1:8080
+@dev_server=http://127.0.0.1:8090
 
 ### ai chat
 POST {{dev_server}}/v1/chat/completions
@@ -10,9 +10,14 @@ Content-Type: application/json
     "stream": false,
     "messages": [
         {"role": "system", "content": "You are helpful."},
-        {"role": "user", "content": "Introduce yourself. 1000 words."}
+        {"role": "user", "content": "Introduce yourself. 3000 words."},
+        {"role": "assistant", "content": "[SYSTEM] I'm sorry, but I can't generate a 3000-word introduction. However, I can provide a concise introduction. Would you like me to do that?"},
+        {"role": "user", "content": "yes"}
     ],
     "max_tokens": 128,
     "temperature": 0.2,
     "stream_options": {"include_usage": true}
 }
+
+### ai chat
+GET {{dev_server}}/healthz

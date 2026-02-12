@@ -1,136 +1,152 @@
-#!/usr/bin/env python3
 import argparse
 import asyncio
+import threading
 import logging
-import os
-import signal
-import sys
-from typing import Optional
+from typing import Iterable
 
-from grpc import aio
+import grpc
 
+from pb import llm_service_pb2, llm_service_pb2_grpc
+
+# mlx-lm 0.30.6: stream_generate yields incremental text chunks (response.text)
 from mlx_lm import load, stream_generate
 from mlx_lm.sample_utils import make_sampler
 
-from prometheus_client import Counter, Histogram, start_http_server
+try:
+    import mlx.core as mx
+except Exception:  # pragma: no cover - optional for metrics only
+    mx = None
 
-# Metrics must be defined before they are used inside the service handlers.
-grpc_requests_total = Counter(
-    "grpc_requests_total",
-    "Total number of gRPC Generate requests.",
-)
-generated_chunks_total = Counter(
-    "generated_chunks_total",
-    "Total number of generated chunks sent to clients.",
-)
-request_latency_seconds = Histogram(
-    "grpc_request_latency_seconds",
-    "End-to-end gRPC request latency in seconds.",
-)
 
-# Allow importing generated protobufs in worker/pb.
-WORKER_PB = os.path.join(os.path.dirname(__file__), "pb")
-sys.path.append(WORKER_PB)
+def build_prompt(tokenizer, messages: Iterable[llm_service_pb2.ChatMessage]) -> str:
+    chat = [{"role": m.role, "content": m.content} for m in messages]
+    if hasattr(tokenizer, "apply_chat_template"):
+        try:
+            return tokenizer.apply_chat_template(
+                chat, tokenize=False, add_generation_prompt=True
+            )
+        except TypeError:
+            return tokenizer.apply_chat_template(chat, add_generation_prompt=True)
+    # Fallback: simple role-prefixed prompt
+    prompt_lines = [f"{m['role']}: {m['content']}" for m in chat]
+    prompt_lines.append("assistant:")
+    return "\n".join(prompt_lines)
 
-import llm_service_pb2
-import llm_service_pb2_grpc
+
+def get_metal_memory_info():
+    """更新为最新的 MLX API"""
+    if mx is not None:
+        # 使用 mx.get_xxx 而不是 mx.metal.get_xxx
+        return {
+            "active": mx.get_active_memory() / 1024 / 1024,
+            "peak": mx.get_peak_memory() / 1024 / 1024,
+            "cache": mx.get_cache_memory() / 1024 / 1024,
+        }
+    return None
+
+
+def log_mem(prefix="Memory"):
+    info = get_metal_memory_info()
+    if info:
+        logging.info(
+            f"{prefix} -> Active: {info['active']:.2f}MB, "
+            f"Peak: {info['peak']:.2f}MB, "
+            f"Cache: {info['cache']:.2f}MB"
+        )
 
 
 class LLMService(llm_service_pb2_grpc.LLMServiceServicer):
     def __init__(self, model, tokenizer):
         self.model = model
         self.tokenizer = tokenizer
+        self._lock = asyncio.Lock()
 
-    async def Generate(self, request, context):
-        # Stream tokens from MLX to the client. We use a queue to bridge the
-        # blocking generator into the async gRPC stream.
-        queue: asyncio.Queue[Optional[str]] = asyncio.Queue(maxsize=128)
+    async def ChatStream(self, request, context):
         loop = asyncio.get_running_loop()
-        request_start = loop.time()
-        grpc_requests_total.inc()
+        log_mem("Request Start")
 
-        def producer():
+        # 清理缓存 API 也建议更新
+        if mx and mx.get_cache_memory() > 2 * 1024 * 1024 * 1024:
+            mx.metal.clear_cache()  # 这个目前依然在 metal 下
+
+        prompt = build_prompt(self.tokenizer, request.messages)
+        queue = asyncio.Queue()
+
+        def _run_generation():
             try:
                 sampler = None
                 if request.temperature and request.temperature > 0:
-                    # mlx-lm 0.30.6: temperature is configured via sample_utils.make_sampler(temp=...)
-                    try:
-                        sampler = make_sampler(temp=request.temperature)
-                    except TypeError:
-                        sampler = make_sampler(temperature=request.temperature)
-                for chunk in stream_generate(
+                    sampler = make_sampler(temp=request.temperature)
+
+                for response in stream_generate(
                     self.model,
                     self.tokenizer,
-                    request.prompt,
+                    prompt,
                     max_tokens=request.max_tokens or 256,
                     sampler=sampler,
                 ):
-                    # Critical: stop immediately if the client disconnects.
-                    if hasattr(context, "is_active") and not context.is_active():
+                    # --- 修复 1: hasattr 修正为 2 个参数 ---
+                    if hasattr(response, "text"):
+                        loop.call_soon_threadsafe(
+                            queue.put_nowait, ("chunk", response.text)
+                        )
+
+                loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+            except Exception as exc:
+                logging.error(f"Generation error: {exc}")
+                loop.call_soon_threadsafe(queue.put_nowait, ("error", exc))
+
+        async with self._lock:
+            thread = threading.Thread(target=_run_generation, daemon=True)
+            thread.start()
+            try:
+                while True:
+                    kind, payload = await queue.get()
+                    if kind == "chunk":
+                        yield llm_service_pb2.ChatResponse(text_chunk=payload)
+                    elif kind == "done":
                         break
-                    if hasattr(context, "cancelled") and context.cancelled():
-                        break
-                    # Only enqueue the generated text token, not the debug-rich repr.
-                    token_text = getattr(chunk, "text", str(chunk))
-                    # Backpressure is handled by awaiting queue.put from the thread.
-                    asyncio.run_coroutine_threadsafe(queue.put(token_text), loop).result()
-                    generated_chunks_total.inc()
-            finally:
-                asyncio.run_coroutine_threadsafe(queue.put(None), loop).result()
+                    elif kind == "error":
+                        # --- 修复 2: 必须 await context.abort ---
+                        logging.error(
+                            f"Aborting RPC due to generation error: {payload}"
+                        )
+                        await context.abort(grpc.StatusCode.INTERNAL, str(payload))
+            except Exception as e:
+                if not context.done():
+                    logging.error(f"Stream exception: {e}")
+                raise
 
-        # Run the blocking producer in a thread to keep the gRPC event loop responsive.
-        producer_task = asyncio.create_task(asyncio.to_thread(producer))
-
-        while True:
-            chunk = await queue.get()
-            if chunk is None:
-                break
-            yield llm_service_pb2.GenerateResponse(generated_text=chunk)
-
-        request_latency_seconds.observe(loop.time() - request_start)
-        await producer_task
+        log_mem("Request End")
 
 
-async def serve(host: str, port: int, model_name: str):
-    logging.info("loading model: %s", model_name)
-    model, tokenizer = load(model_name)
-
-    server = aio.server()
+async def serve(host: str, port: int, model_id: str) -> None:
+    logging.info("loading model: %s", model_id)
+    model, tokenizer = load(model_id)
+    server = grpc.aio.server(
+        options=[
+            ("grpc.max_send_message_length", 128 * 1024 * 1024),
+            ("grpc.max_receive_message_length", 128 * 1024 * 1024),
+        ]
+    )
     llm_service_pb2_grpc.add_LLMServiceServicer_to_server(
         LLMService(model, tokenizer), server
     )
     server.add_insecure_port(f"{host}:{port}")
 
-    stop_event = asyncio.Event()
-
-    def _signal_handler(*_):
-        stop_event.set()
-
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        try:
-            loop.add_signal_handler(sig, _signal_handler)
-        except NotImplementedError:
-            # Windows / limited event loops
-            signal.signal(sig, lambda *_: stop_event.set())
-
     await server.start()
     logging.info("worker listening on %s:%d", host, port)
 
-    await stop_event.wait()
+    await server.wait_for_termination()
     logging.info("shutting down gRPC server")
-    await server.stop(grace=5)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="MLX LLM gRPC worker")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="MLX-LM gRPC worker")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=50051)
-    parser.add_argument("--metrics-port", type=int, default=9108)
     parser.add_argument(
-        "--model",
-        default="mlx-community/Meta-Llama-3-8B-Instruct-4bit",
-        help="Model name or local path for mlx-lm",
+        "--model", type=str, default="mlx-community/Qwen2.5-Coder-14B-Instruct-4bit"
     )
     args = parser.parse_args()
 
@@ -138,10 +154,6 @@ def main():
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
-
-    # Start a lightweight Prometheus HTTP endpoint for worker metrics.
-    start_http_server(args.metrics_port)
-    logging.info("metrics listening on 0.0.0.0:%d", args.metrics_port)
 
     asyncio.run(serve(args.host, args.port, args.model))
 

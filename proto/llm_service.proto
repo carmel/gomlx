@@ -2,18 +2,27 @@ syntax = "proto3";
 
 package llm;
 
-option go_package = "./;pb";
+option go_package = "./;proto";
 
-message GenerateRequest {
-  string prompt = 1;
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message ChatRequest {
+  repeated ChatMessage messages = 1;
   int32 max_tokens = 2;
   float temperature = 3;
 }
 
-message GenerateResponse {
-  string generated_text = 1;
+message ChatResponse {
+  string text_chunk = 1;
+  string finish_reason = 2;
+  int32 usage_tokens = 3;
+  int32 prompt_tokens = 4;
+  int32 completion_tokens = 5;
 }
 
 service LLMService {
-  rpc Generate(GenerateRequest) returns (stream GenerateResponse);
+  rpc ChatStream(ChatRequest) returns (stream ChatResponse);
 }

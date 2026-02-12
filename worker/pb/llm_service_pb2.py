@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11llm_service.proto\x12\x03llm\"J\n\x0fGenerateRequest\x12\x0e\n\x06prompt\x18\x01 \x01(\t\x12\x12\n\nmax_tokens\x18\x02 \x01(\x05\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\"*\n\x10GenerateResponse\x12\x16\n\x0egenerated_text\x18\x01 \x01(\t2G\n\nLLMService\x12\x39\n\x08Generate\x12\x14.llm.GenerateRequest\x1a\x15.llm.GenerateResponse0\x01\x42\nZ\x08./;protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11llm_service.proto\x12\x03llm\",\n\x0b\x43hatMessage\x12\x0c\n\x04role\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"Z\n\x0b\x43hatRequest\x12\"\n\x08messages\x18\x01 \x03(\x0b\x32\x10.llm.ChatMessage\x12\x12\n\nmax_tokens\x18\x02 \x01(\x05\x12\x13\n\x0btemperature\x18\x03 \x01(\x02\"\x81\x01\n\x0c\x43hatResponse\x12\x12\n\ntext_chunk\x18\x01 \x01(\t\x12\x15\n\rfinish_reason\x18\x02 \x01(\t\x12\x14\n\x0cusage_tokens\x18\x03 \x01(\x05\x12\x15\n\rprompt_tokens\x18\x04 \x01(\x05\x12\x19\n\x11\x63ompletion_tokens\x18\x05 \x01(\x05\x32\x41\n\nLLMService\x12\x33\n\nChatStream\x12\x10.llm.ChatRequest\x1a\x11.llm.ChatResponse0\x01\x42\nZ\x08./;protob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,10 +32,12 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'llm_service_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z\010./;proto'
-  _globals['_GENERATEREQUEST']._serialized_start=26
-  _globals['_GENERATEREQUEST']._serialized_end=100
-  _globals['_GENERATERESPONSE']._serialized_start=102
-  _globals['_GENERATERESPONSE']._serialized_end=144
-  _globals['_LLMSERVICE']._serialized_start=146
-  _globals['_LLMSERVICE']._serialized_end=217
+  _globals['_CHATMESSAGE']._serialized_start=26
+  _globals['_CHATMESSAGE']._serialized_end=70
+  _globals['_CHATREQUEST']._serialized_start=72
+  _globals['_CHATREQUEST']._serialized_end=162
+  _globals['_CHATRESPONSE']._serialized_start=165
+  _globals['_CHATRESPONSE']._serialized_end=294
+  _globals['_LLMSERVICE']._serialized_start=296
+  _globals['_LLMSERVICE']._serialized_end=361
 # @@protoc_insertion_point(module_scope)

@@ -41,7 +41,7 @@ type BenchmarkResult struct {
 // TestBenchmarkSingleService 测试单个服务的性能
 // 使用方法: go test -run TestBenchmarkSingleService -v -timeout 10m
 func TestBenchmarkSingleService(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8080"
+	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 4
 	requestCount := 20
 	maxTokens := int32(128)
@@ -58,7 +58,7 @@ func TestBenchmarkSingleService(t *testing.T) {
 // TestBenchmarkHighLoad 高负载测试
 // 使用方法: go test -run TestBenchmarkHighLoad -v -timeout 20m
 func TestBenchmarkHighLoad(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8080"
+	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 8
 	requestCount := 50
 	maxTokens := int32(256)
@@ -75,7 +75,7 @@ func TestBenchmarkHighLoad(t *testing.T) {
 // TestBenchmarkLongText 长文本生成测试
 // 使用方法: go test -run TestBenchmarkLongText -v -timeout 20m
 func TestBenchmarkLongText(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8080"
+	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 2
 	requestCount := 10
 	maxTokens := int32(512)
@@ -92,7 +92,7 @@ func TestBenchmarkLongText(t *testing.T) {
 // TestBenchmarkLowLatency 低延迟测试（短文本）
 // 使用方法: go test -run TestBenchmarkLowLatency -v -timeout 10m
 func TestBenchmarkLowLatency(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8080"
+	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 10
 	requestCount := 50
 	maxTokens := int32(32)
@@ -109,7 +109,7 @@ func TestBenchmarkLowLatency(t *testing.T) {
 // TestBenchmarkStress 压力测试
 // 使用方法: go test -run TestBenchmarkStress -v -timeout 30m
 func TestBenchmarkStress(t *testing.T) {
-	serviceURL := "http://127.0.0.1:8080"
+	serviceURL := "http://127.0.0.1:8090"
 	concurrency := 16
 	requestCount := 100
 	maxTokens := int32(128)

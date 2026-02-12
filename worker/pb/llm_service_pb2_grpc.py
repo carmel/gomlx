@@ -2,7 +2,8 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from . import llm_service_pb2 as llm__service__pb2
+import llm_service_pb2 as llm__service__pb2
+
 
 class LLMServiceStub(object):
     """Missing associated documentation comment in .proto file."""
@@ -13,17 +14,17 @@ class LLMServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.Generate = channel.unary_stream(
-                '/llm.LLMService/Generate',
-                request_serializer=llm__service__pb2.GenerateRequest.SerializeToString,
-                response_deserializer=llm__service__pb2.GenerateResponse.FromString,
+        self.ChatStream = channel.unary_stream(
+                '/llm.LLMService/ChatStream',
+                request_serializer=llm__service__pb2.ChatRequest.SerializeToString,
+                response_deserializer=llm__service__pb2.ChatResponse.FromString,
                 _registered_method=True)
 
 
 class LLMServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def Generate(self, request, context):
+    def ChatStream(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -32,10 +33,10 @@ class LLMServiceServicer(object):
 
 def add_LLMServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Generate': grpc.unary_stream_rpc_method_handler(
-                    servicer.Generate,
-                    request_deserializer=llm__service__pb2.GenerateRequest.FromString,
-                    response_serializer=llm__service__pb2.GenerateResponse.SerializeToString,
+            'ChatStream': grpc.unary_stream_rpc_method_handler(
+                    servicer.ChatStream,
+                    request_deserializer=llm__service__pb2.ChatRequest.FromString,
+                    response_serializer=llm__service__pb2.ChatResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -49,7 +50,7 @@ class LLMService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Generate(request,
+    def ChatStream(request,
             target,
             options=(),
             channel_credentials=None,
@@ -62,9 +63,9 @@ class LLMService(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/llm.LLMService/Generate',
-            llm__service__pb2.GenerateRequest.SerializeToString,
-            llm__service__pb2.GenerateResponse.FromString,
+            '/llm.LLMService/ChatStream',
+            llm__service__pb2.ChatRequest.SerializeToString,
+            llm__service__pb2.ChatResponse.FromString,
             options,
             channel_credentials,
             insecure,

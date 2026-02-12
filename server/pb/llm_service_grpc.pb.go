@@ -4,7 +4,7 @@
 // - protoc             v5.29.6
 // source: llm_service.proto
 
-package pb
+package proto
 
 import (
 	context "context"
@@ -20,14 +20,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LLMService_Generate_FullMethodName = "/llm.LLMService/Generate"
+	LLMService_ChatStream_FullMethodName = "/llm.LLMService/ChatStream"
 )
 
 // LLMServiceClient is the client API for LLMService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LLMServiceClient interface {
-	Generate(ctx context.Context, in *GenerateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GenerateResponse], error)
+	ChatStream(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error)
 }
 
 type lLMServiceClient struct {
@@ -38,13 +38,13 @@ func NewLLMServiceClient(cc grpc.ClientConnInterface) LLMServiceClient {
 	return &lLMServiceClient{cc}
 }
 
-func (c *lLMServiceClient) Generate(ctx context.Context, in *GenerateRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[GenerateResponse], error) {
+func (c *lLMServiceClient) ChatStream(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ChatResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &LLMService_ServiceDesc.Streams[0], LLMService_Generate_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &LLMService_ServiceDesc.Streams[0], LLMService_ChatStream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[GenerateRequest, GenerateResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ChatRequest, ChatResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -55,13 +55,13 @@ func (c *lLMServiceClient) Generate(ctx context.Context, in *GenerateRequest, op
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type LLMService_GenerateClient = grpc.ServerStreamingClient[GenerateResponse]
+type LLMService_ChatStreamClient = grpc.ServerStreamingClient[ChatResponse]
 
 // LLMServiceServer is the server API for LLMService service.
 // All implementations must embed UnimplementedLLMServiceServer
 // for forward compatibility.
 type LLMServiceServer interface {
-	Generate(*GenerateRequest, grpc.ServerStreamingServer[GenerateResponse]) error
+	ChatStream(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error
 	mustEmbedUnimplementedLLMServiceServer()
 }
 
@@ -72,8 +72,8 @@ type LLMServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedLLMServiceServer struct{}
 
-func (UnimplementedLLMServiceServer) Generate(*GenerateRequest, grpc.ServerStreamingServer[GenerateResponse]) error {
-	return status.Error(codes.Unimplemented, "method Generate not implemented")
+func (UnimplementedLLMServiceServer) ChatStream(*ChatRequest, grpc.ServerStreamingServer[ChatResponse]) error {
+	return status.Error(codes.Unimplemented, "method ChatStream not implemented")
 }
 func (UnimplementedLLMServiceServer) mustEmbedUnimplementedLLMServiceServer() {}
 func (UnimplementedLLMServiceServer) testEmbeddedByValue()                    {}
@@ -96,16 +96,16 @@ func RegisterLLMServiceServer(s grpc.ServiceRegistrar, srv LLMServiceServer) {
 	s.RegisterService(&LLMService_ServiceDesc, srv)
 }
 
-func _LLMService_Generate_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GenerateRequest)
+func _LLMService_ChatStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ChatRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(LLMServiceServer).Generate(m, &grpc.GenericServerStream[GenerateRequest, GenerateResponse]{ServerStream: stream})
+	return srv.(LLMServiceServer).ChatStream(m, &grpc.GenericServerStream[ChatRequest, ChatResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type LLMService_GenerateServer = grpc.ServerStreamingServer[GenerateResponse]
+type LLMService_ChatStreamServer = grpc.ServerStreamingServer[ChatResponse]
 
 // LLMService_ServiceDesc is the grpc.ServiceDesc for LLMService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -116,8 +116,8 @@ var LLMService_ServiceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Generate",
-			Handler:       _LLMService_Generate_Handler,
+			StreamName:    "ChatStream",
+			Handler:       _LLMService_ChatStream_Handler,
 			ServerStreams: true,
 		},
 	},

@@ -5,7 +5,7 @@ GO_OUT=server/pb
 .PHONY: run-worker-1 run-worker-2 run-gateway gen-proto
 
 run-worker:
-	uv run worker/main.py --port 50051 --model /Users/dev/Models/Qwen2.5-Coder-14B-Instruct-4bit
+	uv run worker/main.py --port 50051 --model ~/Models/Qwen2.5-Coder-14B-Instruct-4bit
 
 build-server:
 	go build -ldflags="-w -s" -trimpath -o server ./server

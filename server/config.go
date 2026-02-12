@@ -9,13 +9,13 @@ import (
 )
 
 type Config struct {
-	HTTPPort     int           `yaml:"http_port"`
-	GRPCAddress  string        `yaml:"grpc_address"`
-	ReadTimeout  time.Duration `yaml:"read_timeout"`
-	WriteTimeout time.Duration `yaml:"write_timeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout"`
-	LogLevel     string        `yaml:"log_level"`
-	MetricsPath  string        `yaml:"metrics_path"`
+	HTTPPort              int           `yaml:"http_port"`
+	WorkerAddress         string        `yaml:"worker_address"`
+	ReadTimeout           time.Duration `yaml:"read_timeout"`
+	WriteTimeout          time.Duration `yaml:"write_timeout"`
+	IdleTimeout           time.Duration `yaml:"idle_timeout"`
+	LogLevel              string        `yaml:"log_level"`
+	MaxConcurrentRequests int           `yaml:"max_concurrent_requests"`
 }
 
 func LoadConfig(path string) (Config, error) {
@@ -32,8 +32,8 @@ func LoadConfig(path string) (Config, error) {
 	if cfg.HTTPPort == 0 {
 		cfg.HTTPPort = 8080
 	}
-	if cfg.GRPCAddress == "" {
-		cfg.GRPCAddress = "127.0.0.1:50051"
+	if cfg.WorkerAddress == "" {
+		cfg.WorkerAddress = "127.0.0.1:50051"
 	}
 	if cfg.ReadTimeout == 0 {
 		cfg.ReadTimeout = 5 * time.Second
@@ -43,9 +43,6 @@ func LoadConfig(path string) (Config, error) {
 	}
 	if cfg.LogLevel == "" {
 		cfg.LogLevel = "info"
-	}
-	if cfg.MetricsPath == "" {
-		cfg.MetricsPath = "/metrics"
 	}
 
 	return cfg, nil

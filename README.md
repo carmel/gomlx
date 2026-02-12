@@ -1,74 +1,110 @@
-# MLX gRPC LLM Inference Scaffold
+<div align="right">
+  <span>[<a href="./README.md">English</a>]<span>
+  </span>[<a href="./README_CN.md">简体中文</a>]</span>
+</div>
 
-这是一个基于 Apple Silicon 的 `mlx-lm` 推理 Worker（Python）与 HTTP API Gateway（Go）解耦的项目脚手架。通信使用 gRPC Server-Side Streaming，HTTP 侧以 `net/http` + chunked 方式把 token 实时推送给客户端。
+# GoMLX: High-Performance AI Model Serving Gateway
 
-## 目录结构
-- `proto/`：Protobuf 定义
-- `worker/`：Python gRPC 推理服务（MLX）
-- `server/`：Go HTTP API Gateway
-- `config.yaml`：Go 服务器配置
-- `Makefile`：常用命令
+GoMLX is a production-grade AI model serving framework built with a **Go + Python** hybrid architecture. It leverages the high-concurrency capabilities of Go to provide an OpenAI-compatible API gateway, while driving high-performance Python-based AI inference engines via the gRPC protocol.
 
-## 依赖
-- Python 3.10+
-- Go 1.21+
-- `uv`
-- `protoc`
+## 🌟 Key Features
 
-## 安装与生成
-1. 安装 Python 依赖（使用 `uv`）
+- **OpenAI API Compatibility**: Seamlessly integrates with existing OpenAI client ecosystems (supports `/v1/chat/completions`).
+- **Native Streaming (SSE)**: Built-in support for Server-Sent Events (SSE) to enable real-time "typewriter" effects.
+- **Efficient gRPC Communication**: Low-latency, high-throughput communication between the Gateway and Inference Worker using Protobuf.
+- **Concurrency & Rate Limiting**: Integrated Semaphore-based traffic control to protect GPU resources from being overwhelmed by request spikes.
+- **Production-Ready Robustness**: Features graceful shutdown, cascaded context cancellation, and proxy-optimized headers (e.g., for Nginx).
+- **Structured Logging**: Powered by Go's `slog` for high-performance, JSON-formatted observability.
 
-```bash
-uv venv .venv
-source .venv/bin/activate
-uv pip install -r worker/requirements.txt
+## 🏗 System Architecture
+
+```text
+[ Client ] <--- HTTP/JSON (SSE) ---> [ Go Gateway ] <--- gRPC (Protobuf) ---> [ Python Worker ]
+    |                                     |                                       |
+  Apps/SDKs                       Concurrency Control                      GPU Inference
+                                 & Protocol Translation                  (PyTorch/vLLM/MLX)
 ```
 
-2. 生成 Protobuf 代码
+## 📂 Project Structure
 
-```bash
-make proto-gen
+```text
+.
+├── gateway/                # Go implementation of the API Gateway
+│   ├── main.go             # Entry point, HTTP routing, and Middleware
+│   ├── config.go           # Configuration management
+│   └── pb/                 # Generated Go code from gRPC Protobuf
+├── worker/                 # Python implementation of the Inference Backend
+│   ├── server.py           # gRPC server implementation
+│   └── model.py            # Model loading and inference logic
+└── proto/                  # Interface definition files
+    └── llm_service.proto   # Service definitions (e.g., ChatStream)
 ```
 
-3. 安装 Go 依赖
+## 🚀 Quick Start
+
+### 1. Prerequisites
+
+- **Go**: version 1.21 or higher
+- **Python**: version 3.9 or higher
+- **Protobuf**: `protoc` compiler installed
+
+### 2. Generate Interfaces (Protobuf)
 
 ```bash
-go mod tidy
+# Generate Go code
+protoc --go_out=. --go-grpc_out=. proto/llm_service.proto
+
+# Generate Python code
+python -m grpc_tools.protoc -I./proto --python_out=./worker --grpc_python_out=./worker proto/llm_service.proto
 ```
 
-## 运行
-1. 启动 Python Worker（在 Apple Silicon 上运行）
+### 3. Start the Inference Worker (Python)
 
 ```bash
-make run-python
+cd worker
+pip install grpcio grpcio-tools transformers torch
+python server.py --port 50051
 ```
 
-2. 启动 Go API Gateway
+### 4. Start the Gateway (Go)
 
 ```bash
-make run-go
+cd gateway
+go build -o gateway
+./gateway --config config.yaml
 ```
 
-3. 访问 Prometheus 指标
+## ⚙️ Configuration (`config.yaml`)
 
-```bash
-curl http://localhost:8080/metrics
-curl http://localhost:9108
+```yaml
+http_port: 8080
+worker_address: "localhost:50051"
+max_concurrent_requests: 50 # Limit concurrent GPU tasks
+read_timeout: 30s
+write_timeout: 300s # Set long enough for slow LLM generation
+log_level: "info"
 ```
 
-## 测试
+## 📝 API Usage Example
+
+Verify the OpenAI compatibility using standard `curl`:
 
 ```bash
-curl -N -X POST http://localhost:8080/v1/chat/completions \
+curl http://localhost:8080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"prompt":"Hello","max_tokens":64,"temperature":0.7}'
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [{"role": "user", "content": "Tell me a short story about a robot."}],
+    "stream": true
+  }'
 ```
 
-`-N` 会关闭 curl 的缓冲，确保你能看到实时流式输出。
+## 🛠 Development Roadmap
 
-## 说明
-- Go 端使用 `r.Context()` 直接传递给 gRPC 流，客户端断开会立即取消后端生成。
-- Python 端在生成循环中检查 `context.is_active()`，一旦失活就停止生成。
-- HTTP 使用 `http.Flusher` 立刻把 token 写回客户端，实现打字机效果。
-- Go 端暴露 `metrics_path`（默认 `/metrics`）用于 Prometheus 抓取。
-- Python Worker 在 `--metrics-port` 上启动 Prometheus HTTP 端点（默认 `9108`）。
+1.  **Token Counting**: Currently, the gateway uses a rough estimation for Token usage. For production billing, integration with `tiktoken-go` is recommended.
+2.  **Load Balancing**: For multi-GPU setups, the Gateway can be extended to support Round-Robin or Least-Load balancing across multiple Python Workers.
+3.  **Content Moderation**: Integration of safety filters and sensitive word filtering within the Gateway layer.
+
+## 📄 License
+
+[MIT License](LICENSE)

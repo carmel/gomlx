@@ -1,7 +1,7 @@
-http_port: 8080
-grpc_address: "192.168.3.21:50051"
+http_port: 8090
+worker_address: "192.168.3.21:50051"
 read_timeout: 5s
 write_timeout: 0s
 idle_timeout: 120s
-log_level: "info"
-metrics_path: "/metrics"
+log_level: "debug"
+max_concurrent_requests: 4

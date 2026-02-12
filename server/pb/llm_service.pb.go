@@ -4,7 +4,7 @@
 // 	protoc        v5.29.6
 // source: llm_service.proto
 
-package pb
+package proto
 
 import (
 	reflect "reflect"
@@ -22,30 +22,82 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type GenerateRequest struct {
+type ChatMessage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Prompt        string                 `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Role          string                 `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
+	Content       string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChatMessage) Reset() {
+	*x = ChatMessage{}
+	mi := &file_llm_service_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChatMessage) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChatMessage) ProtoMessage() {}
+
+func (x *ChatMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_llm_service_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChatMessage.ProtoReflect.Descriptor instead.
+func (*ChatMessage) Descriptor() ([]byte, []int) {
+	return file_llm_service_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ChatMessage) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *ChatMessage) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+type ChatRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Messages      []*ChatMessage         `protobuf:"bytes,1,rep,name=messages,proto3" json:"messages,omitempty"`
 	MaxTokens     int32                  `protobuf:"varint,2,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
 	Temperature   float32                `protobuf:"fixed32,3,opt,name=temperature,proto3" json:"temperature,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *GenerateRequest) Reset() {
-	*x = GenerateRequest{}
-	mi := &file_llm_service_proto_msgTypes[0]
+func (x *ChatRequest) Reset() {
+	*x = ChatRequest{}
+	mi := &file_llm_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GenerateRequest) String() string {
+func (x *ChatRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GenerateRequest) ProtoMessage() {}
+func (*ChatRequest) ProtoMessage() {}
 
-func (x *GenerateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_llm_service_proto_msgTypes[0]
+func (x *ChatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_llm_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,54 +108,58 @@ func (x *GenerateRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GenerateRequest.ProtoReflect.Descriptor instead.
-func (*GenerateRequest) Descriptor() ([]byte, []int) {
-	return file_llm_service_proto_rawDescGZIP(), []int{0}
+// Deprecated: Use ChatRequest.ProtoReflect.Descriptor instead.
+func (*ChatRequest) Descriptor() ([]byte, []int) {
+	return file_llm_service_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GenerateRequest) GetPrompt() string {
+func (x *ChatRequest) GetMessages() []*ChatMessage {
 	if x != nil {
-		return x.Prompt
+		return x.Messages
 	}
-	return ""
+	return nil
 }
 
-func (x *GenerateRequest) GetMaxTokens() int32 {
+func (x *ChatRequest) GetMaxTokens() int32 {
 	if x != nil {
 		return x.MaxTokens
 	}
 	return 0
 }
 
-func (x *GenerateRequest) GetTemperature() float32 {
+func (x *ChatRequest) GetTemperature() float32 {
 	if x != nil {
 		return x.Temperature
 	}
 	return 0
 }
 
-type GenerateResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GeneratedText string                 `protobuf:"bytes,1,opt,name=generated_text,json=generatedText,proto3" json:"generated_text,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+type ChatResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TextChunk        string                 `protobuf:"bytes,1,opt,name=text_chunk,json=textChunk,proto3" json:"text_chunk,omitempty"`
+	FinishReason     string                 `protobuf:"bytes,2,opt,name=finish_reason,json=finishReason,proto3" json:"finish_reason,omitempty"`
+	UsageTokens      int32                  `protobuf:"varint,3,opt,name=usage_tokens,json=usageTokens,proto3" json:"usage_tokens,omitempty"`
+	PromptTokens     int32                  `protobuf:"varint,4,opt,name=prompt_tokens,json=promptTokens,proto3" json:"prompt_tokens,omitempty"`
+	CompletionTokens int32                  `protobuf:"varint,5,opt,name=completion_tokens,json=completionTokens,proto3" json:"completion_tokens,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
-func (x *GenerateResponse) Reset() {
-	*x = GenerateResponse{}
-	mi := &file_llm_service_proto_msgTypes[1]
+func (x *ChatResponse) Reset() {
+	*x = ChatResponse{}
+	mi := &file_llm_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *GenerateResponse) String() string {
+func (x *ChatResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*GenerateResponse) ProtoMessage() {}
+func (*ChatResponse) ProtoMessage() {}
 
-func (x *GenerateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_llm_service_proto_msgTypes[1]
+func (x *ChatResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_llm_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -114,33 +170,70 @@ func (x *GenerateResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use GenerateResponse.ProtoReflect.Descriptor instead.
-func (*GenerateResponse) Descriptor() ([]byte, []int) {
-	return file_llm_service_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use ChatResponse.ProtoReflect.Descriptor instead.
+func (*ChatResponse) Descriptor() ([]byte, []int) {
+	return file_llm_service_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *GenerateResponse) GetGeneratedText() string {
+func (x *ChatResponse) GetTextChunk() string {
 	if x != nil {
-		return x.GeneratedText
+		return x.TextChunk
 	}
 	return ""
+}
+
+func (x *ChatResponse) GetFinishReason() string {
+	if x != nil {
+		return x.FinishReason
+	}
+	return ""
+}
+
+func (x *ChatResponse) GetUsageTokens() int32 {
+	if x != nil {
+		return x.UsageTokens
+	}
+	return 0
+}
+
+func (x *ChatResponse) GetPromptTokens() int32 {
+	if x != nil {
+		return x.PromptTokens
+	}
+	return 0
+}
+
+func (x *ChatResponse) GetCompletionTokens() int32 {
+	if x != nil {
+		return x.CompletionTokens
+	}
+	return 0
 }
 
 var File_llm_service_proto protoreflect.FileDescriptor
 
 const file_llm_service_proto_rawDesc = "" +
 	"\n" +
-	"\x11llm_service.proto\x12\x03llm\"j\n" +
-	"\x0fGenerateRequest\x12\x16\n" +
-	"\x06prompt\x18\x01 \x01(\tR\x06prompt\x12\x1d\n" +
+	"\x11llm_service.proto\x12\x03llm\";\n" +
+	"\vChatMessage\x12\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\"|\n" +
+	"\vChatRequest\x12,\n" +
+	"\bmessages\x18\x01 \x03(\v2\x10.llm.ChatMessageR\bmessages\x12\x1d\n" +
 	"\n" +
 	"max_tokens\x18\x02 \x01(\x05R\tmaxTokens\x12 \n" +
-	"\vtemperature\x18\x03 \x01(\x02R\vtemperature\"9\n" +
-	"\x10GenerateResponse\x12%\n" +
-	"\x0egenerated_text\x18\x01 \x01(\tR\rgeneratedText2G\n" +
+	"\vtemperature\x18\x03 \x01(\x02R\vtemperature\"\xc7\x01\n" +
+	"\fChatResponse\x12\x1d\n" +
 	"\n" +
-	"LLMService\x129\n" +
-	"\bGenerate\x12\x14.llm.GenerateRequest\x1a\x15.llm.GenerateResponse0\x01B\n" +
+	"text_chunk\x18\x01 \x01(\tR\ttextChunk\x12#\n" +
+	"\rfinish_reason\x18\x02 \x01(\tR\ffinishReason\x12!\n" +
+	"\fusage_tokens\x18\x03 \x01(\x05R\vusageTokens\x12#\n" +
+	"\rprompt_tokens\x18\x04 \x01(\x05R\fpromptTokens\x12+\n" +
+	"\x11completion_tokens\x18\x05 \x01(\x05R\x10completionTokens2A\n" +
+	"\n" +
+	"LLMService\x123\n" +
+	"\n" +
+	"ChatStream\x12\x10.llm.ChatRequest\x1a\x11.llm.ChatResponse0\x01B\n" +
 	"Z\b./;protob\x06proto3"
 
 var (
@@ -155,19 +248,21 @@ func file_llm_service_proto_rawDescGZIP() []byte {
 	return file_llm_service_proto_rawDescData
 }
 
-var file_llm_service_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_llm_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_llm_service_proto_goTypes = []any{
-	(*GenerateRequest)(nil),  // 0: llm.GenerateRequest
-	(*GenerateResponse)(nil), // 1: llm.GenerateResponse
+	(*ChatMessage)(nil),  // 0: llm.ChatMessage
+	(*ChatRequest)(nil),  // 1: llm.ChatRequest
+	(*ChatResponse)(nil), // 2: llm.ChatResponse
 }
 var file_llm_service_proto_depIdxs = []int32{
-	0, // 0: llm.LLMService.Generate:input_type -> llm.GenerateRequest
-	1, // 1: llm.LLMService.Generate:output_type -> llm.GenerateResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: llm.ChatRequest.messages:type_name -> llm.ChatMessage
+	1, // 1: llm.LLMService.ChatStream:input_type -> llm.ChatRequest
+	2, // 2: llm.LLMService.ChatStream:output_type -> llm.ChatResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_llm_service_proto_init() }
@@ -181,7 +276,7 @@ func file_llm_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_llm_service_proto_rawDesc), len(file_llm_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
